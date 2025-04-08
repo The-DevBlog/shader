@@ -4,25 +4,38 @@ use bevy::{
     prelude::*,
     render::render_resource::{AsBindGroup, ShaderRef},
 };
-use bevy_rts_camera::*;
+use bevy_third_person_camera::{
+    ThirdPersonCamera, ThirdPersonCameraPlugin, ThirdPersonCameraTarget,
+};
 
 fn main() {
     App::new()
         .add_plugins((
             DefaultPlugins,
-            RtsCameraPlugin,
+            ThirdPersonCameraPlugin,
             MaterialPlugin::<ExtendedMaterial<StandardMaterial, MyExtension>>::default(),
-            // MaterialPlugin::<CustomMaterial>::default(),
+            MaterialPlugin::<CustomMaterial>::default(),
         ))
-        .add_systems(Startup, (setup, spawn))
+        // .add_systems(Startup, (setup, spawn))
+        .add_systems(Startup, setup)
+        .add_systems(Startup, spawn_cube)
+        .add_systems(Update, update_frame_system)
         .run();
 }
 
-fn setup(mut cmds: Commands) {
+fn setup(
+    mut cmds: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    cmds.spawn((
+        Mesh3d(meshes.add(Plane3d::default().mesh().size(50.0, 50.0))),
+        MeshMaterial3d(materials.add(Color::srgb(0.44, 0.75, 0.44))),
+    ));
+
     cmds.spawn((
         Camera3d::default(),
-        RtsCamera::default(),
-        RtsCameraControls::default(),
+        ThirdPersonCamera::default(),
         Transform::from_xyz(20.0, 20.0, 20.0).looking_at(Vec3::ZERO, Vec3::Y),
     ));
 
@@ -65,7 +78,7 @@ fn spawn(
             },
             extension: MyExtension { quantize_steps: 3 },
         })),
-        Transform::from_xyz(0.0, 0.5, 0.0),
+        Transform::from_xyz(0.0, 1.0, 0.0),
     ));
 }
 
@@ -87,29 +100,43 @@ impl MaterialExtension for MyExtension {
 }
 
 // ----------------- CUSTOM MATERIAL SHADER ------------------
-// fn spawn_cube(
-//     mut cmds: Commands,
-//     mut meshes: ResMut<Assets<Mesh>>,
-//     mut materials: ResMut<Assets<StandardMaterial>>,
-//     mut custom_materials: ResMut<Assets<CustomMaterial>>,
-// ) {
-//     cmds.spawn((
-//         Mesh3d(meshes.add(Cuboid::new(1.0, 1.0, 1.0))),
-//         // MeshMaterial3d(materials.add(StandardMaterial::from_color(Color::WHITE))),
-//         MeshMaterial3d(custom_materials.add(CustomMaterial {
-//             color: LinearRgba::BLUE,
-//         })),
-//     ));
-// }
+fn spawn_cube(
+    mut cmds: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut custom_materials: ResMut<Assets<CustomMaterial>>,
+) {
+    cmds.spawn((
+        Mesh3d(meshes.add(Cuboid::new(1.0, 1.0, 1.0))),
+        // MeshMaterial3d(materials.add(StandardMaterial::from_color(Color::WHITE))),
+        MeshMaterial3d(custom_materials.add(CustomMaterial {
+            frame: 1,
+            // color: LinearRgba::BLUE,
+        })),
+        ThirdPersonCameraTarget,
+        Transform::from_translation(Vec3::new(0.0, 0.5, 0.0)),
+    ));
+}
 
-// #[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
-// struct CustomMaterial {
-//     #[uniform(0)]
-//     color: LinearRgba,
-// }
+fn update_frame_system(mut custom_materials: ResMut<Assets<CustomMaterial>>) {
+    // Iterate over all CustomMaterial assets.
+    for (_handle, material) in custom_materials.iter_mut() {
+        // Increment the frame value.
+        // wrapping_add is used to safely handle overflow.
+        material.frame = material.frame.wrapping_add(1);
+    }
+}
 
-// impl Material for CustomMaterial {
-//     fn fragment_shader() -> ShaderRef {
-//         "custom_material_shader.wgsl".into()
-//     }
-// }
+#[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
+struct CustomMaterial {
+    // #[uniform(0)]
+    // color: LinearRgba,
+    #[uniform(0)]
+    frame: u32,
+}
+
+impl Material for CustomMaterial {
+    fn fragment_shader() -> ShaderRef {
+        "custom_material_shader.wgsl".into()
+    }
+}
