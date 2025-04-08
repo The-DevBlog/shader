@@ -1,5 +1,5 @@
 use bevy::{
-    color::palettes::css::{GREEN, RED},
+    color::palettes::css::{BLUE, GREEN, LIGHT_BLUE, RED, WHITE, YELLOW},
     pbr::{ExtendedMaterial, MaterialExtension, OpaqueRendererMethod},
     prelude::*,
     render::render_resource::{AsBindGroup, ShaderRef},
@@ -34,6 +34,8 @@ fn setup(
         Mesh3d(meshes.add(Plane3d::default().mesh().size(50.0, 50.0))),
         MeshMaterial3d(custom_materials.add(CustomMaterial {
             color: color.into(),
+            tint: YELLOW.into(),
+            tint_strength: 0.8,
         })),
         // MeshMaterial3d(materials.add(Color::srgb(0.44, 0.75, 0.44))),
         Transform::from_translation(Vec3::new(0.0, -0.5, 0.0)),
@@ -95,6 +97,12 @@ struct CustomMaterial {
     // This uniform will be sent to the shader as "material_color"
     #[uniform(0)]
     color: LinearRgba,
+
+    #[uniform(1)]
+    tint: LinearRgba,
+
+    #[uniform(2)]
+    tint_strength: f32,
 }
 
 // #[derive(Asset, AsBindGroup, Reflect, Debug, Clone)]
@@ -133,7 +141,9 @@ fn spawn_cube(
         Mesh3d(meshes.add(Cuboid::new(1.0, 1.0, 1.0))),
         MeshMaterial3d(custom_materials.add(CustomMaterial {
             // frame: 1,
-            color: LinearRgba::BLUE,
+            color: LIGHT_BLUE.into(),
+            tint: YELLOW.into(),
+            tint_strength: 0.8,
         })),
         // MeshMaterial3d(materials.add(ExtendedMaterial {
         //     base: StandardMaterial {
