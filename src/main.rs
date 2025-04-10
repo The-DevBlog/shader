@@ -20,6 +20,7 @@ fn main() {
         ))
         .add_systems(Startup, setup)
         .add_systems(Startup, spawn_cube)
+        .add_systems(Update, customize_scene_materials)
         .run();
 }
 
@@ -96,29 +97,67 @@ fn spawn_cube(
     mut cmds: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut extended_materials: ResMut<Assets<ExtendedMaterial<StandardMaterial, MyExtension>>>,
+    gltf: Res<Assets<Gltf>>,
     assets: Res<AssetServer>,
 ) {
     cmds.spawn((
-        Mesh3d(meshes.add(Cuboid::new(25.0, 25.0, 25.0))),
-        MeshMaterial3d(extended_materials.add(ExtendedMaterial {
-            base: StandardMaterial {
-                base_color: BLUE_600.into(),
-                // can be used in forward or deferred mode
-                opaque_render_method: OpaqueRendererMethod::Auto,
-                // in deferred mode, only the PbrInput can be modified (uvs, color and other material properties),
-                // in forward mode, the output can also be modified after lighting is applied.
-                // see the fragment shader `extended_material.wgsl` for more info.
-                // Note: to run in deferred mode, you must also add a `DeferredPrepass` component to the camera and either
-                // change the above to `OpaqueRendererMethod::Deferred` or add the `DefaultOpaqueRendererMethod` resource.
-                ..Default::default()
-            },
-            extension: MyExtension {
-                tint: YELLOW.into(),
-                tint_strength: 0.8,
-            },
-        })),
-        // SceneRoot(assets.load("tank_gen_2.gltf#Scene0")),
+        // Mesh3d(meshes.add(Cuboid::new(25.0, 25.0, 25.0))),
+        // MeshMaterial3d(extended_materials.add(ExtendedMaterial {
+        //     base: StandardMaterial {
+        //         base_color: BLUE_600.into(),
+        //         // can be used in forward or deferred mode
+        //         opaque_render_method: OpaqueRendererMethod::Auto,
+        //         // in deferred mode, only the PbrInput can be modified (uvs, color and other material properties),
+        //         // in forward mode, the output can also be modified after lighting is applied.
+        //         // see the fragment shader `extended_material.wgsl` for more info.
+        //         // Note: to run in deferred mode, you must also add a `DeferredPrepass` component to the camera and either
+        //         // change the above to `OpaqueRendererMethod::Deferred` or add the `DefaultOpaqueRendererMethod` resource.
+        //         ..Default::default()
+        //     },
+        //     extension: MyExtension {
+        //         tint: YELLOW.into(),
+        //         tint_strength: 0.8,
+        //     },
+        // })),
+        SceneRoot(assets.load("tank_gen_2.gltf#Scene0")),
         ThirdPersonCameraTarget,
         Transform::from_translation(Vec3::new(0.0, 2.0, 0.0)),
     ));
+}
+
+pub fn customize_scene_materials(
+    gltf: Res<Assets<Gltf>>,
+    // h: Query<(Entity, &Handle<StandardMaterial>)>,
+    // unloaded_instances: Query<(Entity, &SceneInstance), With<StandardMaterial>>,
+    // handles: Query<(Entity, &Handle<StandardMaterial>)>,
+    // pbr_materials: Res<Assets<StandardMaterial>>,
+    // scene_manager: Res<SceneSpawner>,
+    // mut custom_materials: ResMut<Assets<MyCustomMaterial>>,
+    assets: Res<AssetServer>,
+    // mut cmds: Commands,
+) {
+    let gltf_handle: Handle<Gltf> = assets.load("tank_gen_2.gltf");
+
+    if let Some(gltf) = gltf.get(&gltf_handle) {
+        println!("found it!!!");
+        println!("materials: {}", gltf.materials.len());
+    } else {
+        println!("GLTF asset not loaded yet.");
+    }
+    // for (entity, instance, hooked) in unloaded_instances.iter() {
+    //     if scene_manager.instance_is_ready(**instance) {
+    //         cmds.entity(entity).remove::<CustomizeMaterial>();
+    //     }
+    //     // Iterate over all entities in scene (once it's loaded)
+    //     let handles = handles.iter_many(scene_manager.iter_instance_entities(**instance));
+    //     for (entity, material_handle) in handles {
+    //         let Some(material) = pbr_materials.get(material_handle) else {
+    //             continue;
+    //         };
+    //         let custom = custom_materials.add(material.into());
+    //         cmds.entity(entity)
+    //             .insert(custom)
+    //             .remove::<Handle<StandardMaterial>>();
+    //     }
+    // }
 }
