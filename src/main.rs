@@ -26,7 +26,6 @@ fn main() {
 fn setup(
     mut cmds: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
     mut custom_materials: ResMut<Assets<CustomMaterial>>,
 ) {
     let color = Color::srgb(0.44, 0.75, 0.44);
@@ -37,7 +36,6 @@ fn setup(
             tint: YELLOW.into(),
             tint_strength: 0.8,
         })),
-        // MeshMaterial3d(materials.add(Color::srgb(0.44, 0.75, 0.44))),
         Transform::from_translation(Vec3::new(0.0, -0.5, 0.0)),
     ));
 
@@ -134,13 +132,11 @@ fn spawn_cube(
     mut cmds: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut custom_materials: ResMut<Assets<CustomMaterial>>,
-    // mut materials: ResMut<Assets<StandardMaterial>>,
     // mut materials: ResMut<Assets<ExtendedMaterial<StandardMaterial, CustomMaterial>>>,
 ) {
     cmds.spawn((
         Mesh3d(meshes.add(Cuboid::new(1.0, 1.0, 1.0))),
         MeshMaterial3d(custom_materials.add(CustomMaterial {
-            // frame: 1,
             color: LIGHT_BLUE.into(),
             tint: YELLOW.into(),
             tint_strength: 0.8,
