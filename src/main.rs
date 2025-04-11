@@ -13,14 +13,17 @@ use bevy_third_person_camera::{
 
 fn main() {
     App::new()
+        .init_resource::<MyAssets>()
+        .init_resource::<LoadShaders>()
         .add_plugins((
             DefaultPlugins,
             ThirdPersonCameraPlugin,
             MaterialPlugin::<ExtendedMaterial<StandardMaterial, MyExtension>>::default(),
         ))
+        .add_systems(PreStartup, load_assets)
         .add_systems(Startup, setup)
         .add_systems(Startup, spawn_cube)
-        .add_systems(Update, customize_scene_materials)
+        .add_systems(Update, customize_scene_materials.run_if(load_shaders))
         .run();
 }
 
@@ -93,12 +96,37 @@ impl MaterialExtension for MyExtension {
     }
 }
 
+#[derive(Resource)]
+struct LoadShaders(bool);
+
+impl Default for LoadShaders {
+    fn default() -> Self {
+        Self(true)
+    }
+}
+
+#[derive(Resource, Default)]
+struct MyAssets {
+    tank: Handle<Scene>,
+    tank_gltf: Handle<Gltf>,
+}
+
+fn load_shaders(load_shaders: Res<LoadShaders>) -> bool {
+    load_shaders.0
+}
+
+fn load_assets(assets: Res<AssetServer>, mut my_assets: ResMut<MyAssets>) {
+    my_assets.tank = assets.load("tank_gen_2.gltf#Scene0");
+    my_assets.tank_gltf = assets.load("tank_gen_2.gltf");
+}
+
 fn spawn_cube(
     mut cmds: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut extended_materials: ResMut<Assets<ExtendedMaterial<StandardMaterial, MyExtension>>>,
     gltf: Res<Assets<Gltf>>,
     assets: Res<AssetServer>,
+    my_assets: Res<MyAssets>,
 ) {
     cmds.spawn((
         // Mesh3d(meshes.add(Cuboid::new(25.0, 25.0, 25.0))),
@@ -119,45 +147,35 @@ fn spawn_cube(
         //         tint_strength: 0.8,
         //     },
         // })),
-        SceneRoot(assets.load("tank_gen_2.gltf#Scene0")),
+        SceneRoot(my_assets.tank.clone()),
         ThirdPersonCameraTarget,
         Transform::from_translation(Vec3::new(0.0, 2.0, 0.0)),
     ));
 }
 
-pub fn customize_scene_materials(
-    gltf: Res<Assets<Gltf>>,
-    // h: Query<(Entity, &Handle<StandardMaterial>)>,
-    // unloaded_instances: Query<(Entity, &SceneInstance), With<StandardMaterial>>,
-    // handles: Query<(Entity, &Handle<StandardMaterial>)>,
-    // pbr_materials: Res<Assets<StandardMaterial>>,
-    // scene_manager: Res<SceneSpawner>,
-    // mut custom_materials: ResMut<Assets<MyCustomMaterial>>,
-    assets: Res<AssetServer>,
-    // mut cmds: Commands,
+fn customize_scene_materials(
+    gltf_assets: Res<Assets<Gltf>>,
+    my_assets: Res<MyAssets>,
+    mut standard_materials: ResMut<Assets<StandardMaterial>>,
+    mut load_shaders: ResMut<LoadShaders>,
+    mut q_scenes: Query<(Entity), With<SceneRoot>>,
+    mut cmds: Commands,
 ) {
-    let gltf_handle: Handle<Gltf> = assets.load("tank_gen_2.gltf");
-
-    if let Some(gltf) = gltf.get(&gltf_handle) {
-        println!("found it!!!");
-        println!("materials: {}", gltf.materials.len());
-    } else {
-        println!("GLTF asset not loaded yet.");
+    for ent in q_scenes.iter_mut() {
+        cmds.entity(ent).remove::<StandardMaterial>();
     }
-    // for (entity, instance, hooked) in unloaded_instances.iter() {
-    //     if scene_manager.instance_is_ready(**instance) {
-    //         cmds.entity(entity).remove::<CustomizeMaterial>();
-    //     }
-    //     // Iterate over all entities in scene (once it's loaded)
-    //     let handles = handles.iter_many(scene_manager.iter_instance_entities(**instance));
-    //     for (entity, material_handle) in handles {
-    //         let Some(material) = pbr_materials.get(material_handle) else {
-    //             continue;
-    //         };
-    //         let custom = custom_materials.add(material.into());
-    //         cmds.entity(entity)
-    //             .insert(custom)
-    //             .remove::<Handle<StandardMaterial>>();
-    //     }
+
+    // let Some(gltf_asset) = gltf_assets.get(&my_assets.tank_gltf) else {
+    //     return;
+    // };
+
+    // load_shaders.0 = false;
+
+    // for material_handle in &gltf_asset.materials {
+    //     let Some(material) = standard_materials.get_mut(material_handle) else {
+    //         continue;
+    //     };
+
+    //     material.base_color = Color::srgb(0.0, 0.0, 1.0).into(); // Blue
     // }
 }
