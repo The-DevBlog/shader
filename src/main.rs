@@ -3,9 +3,11 @@ use bevy::{
         css::{BLUE, GREEN, LIGHT_BLUE, RED, WHITE, YELLOW},
         tailwind::BLUE_600,
     },
+    math::sampling::standard,
     pbr::{ExtendedMaterial, MaterialExtension, OpaqueRendererMethod},
     prelude::*,
     render::render_resource::{AsBindGroup, ShaderRef},
+    scene::SceneInstanceReady,
 };
 use bevy_third_person_camera::{
     ThirdPersonCamera, ThirdPersonCameraPlugin, ThirdPersonCameraTarget, Zoom,
@@ -23,7 +25,8 @@ fn main() {
         .add_systems(PreStartup, load_assets)
         .add_systems(Startup, setup)
         .add_systems(Startup, spawn_cube)
-        .add_systems(Update, customize_scene_materials.run_if(load_shaders))
+        // .add_systems(Update, customize_scene_materials.run_if(load_shaders))
+        .add_observer(customize_scene_materials)
         .run();
 }
 
@@ -75,10 +78,10 @@ fn setup(
 #[derive(Asset, AsBindGroup, Reflect, Debug, Clone)]
 struct MyExtension {
     // 0 - 99 reserved for base material
-    #[uniform(100)]
+    #[uniform(101)]
     tint: LinearRgba,
 
-    #[uniform(101)]
+    #[uniform(102)]
     tint_strength: f32,
 }
 
@@ -116,8 +119,11 @@ fn load_shaders(load_shaders: Res<LoadShaders>) -> bool {
 }
 
 fn load_assets(assets: Res<AssetServer>, mut my_assets: ResMut<MyAssets>) {
-    my_assets.tank = assets.load("tank_gen_2.gltf#Scene0");
+    // my_assets.tank = assets.load("tank_gen_2.gltf#Scene0");
     my_assets.tank_gltf = assets.load("tank_gen_2.gltf");
+
+    // let h = assets.load(GltfAssetLabel::Scene(0).from_asset("tank_gen_2.gltf"));
+    my_assets.tank = assets.load(GltfAssetLabel::Scene(0).from_asset("tank_gen_2.gltf"));
 }
 
 fn spawn_cube(
@@ -154,28 +160,92 @@ fn spawn_cube(
 }
 
 fn customize_scene_materials(
-    gltf_assets: Res<Assets<Gltf>>,
-    my_assets: Res<MyAssets>,
+    trigger: Trigger<SceneInstanceReady>,
+    mut extended_materials: ResMut<Assets<ExtendedMaterial<StandardMaterial, MyExtension>>>,
     mut standard_materials: ResMut<Assets<StandardMaterial>>,
-    mut load_shaders: ResMut<LoadShaders>,
-    mut q_scenes: Query<(Entity), With<SceneRoot>>,
     mut cmds: Commands,
+    q_children: Query<&Children>,
+    q_mesh_material: Query<(Entity, &MeshMaterial3d<StandardMaterial>)>,
 ) {
-    for ent in q_scenes.iter_mut() {
-        cmds.entity(ent).remove::<StandardMaterial>();
+    println!("SceneInstanceReady!");
+
+    // Traverse the spawned SceneRoot's descendants.
+    for entity in q_children.iter_descendants(trigger.entity()) {
+        // Try to get a MeshMaterial3d<StandardMaterial> component on this entity.
+        if let Ok((ent, mesh_mat)) = q_mesh_material.get(entity) {
+            // Use the handle from the MeshMaterial3d to fetch the StandardMaterial.
+            if let Some(std_mat) = standard_materials.get(mesh_mat.id()) {
+                // Optionally, clone and modify the StandardMaterial.
+                let modified_std = std_mat.clone();
+                // (For example, you could change the base color here before wrapping.)
+                // modified_std.base_color = Color::rgb(0.0, 0.0, 1.0).into();
+
+                // Now create an ExtendedMaterial that wraps the StandardMaterial.
+                let new_extended_handle = extended_materials.add(ExtendedMaterial {
+                    base: modified_std,
+                    extension: MyExtension {
+                        tint: YELLOW.into(), // Your desired tint color.
+                        tint_strength: 0.7,  // How strongly to apply the tint.
+                    },
+                });
+
+                // Replace the material component on this entity:
+                // Option 1: Remove the old material component and insert the new one.
+                cmds.entity(ent)
+                    .remove::<MeshMaterial3d<StandardMaterial>>() // Remove the original.
+                    .insert(MeshMaterial3d(new_extended_handle)); // Insert the new, extended one.
+            }
+        }
     }
-
-    // let Some(gltf_asset) = gltf_assets.get(&my_assets.tank_gltf) else {
-    //     return;
-    // };
-
-    // load_shaders.0 = false;
-
-    // for material_handle in &gltf_asset.materials {
-    //     let Some(material) = standard_materials.get_mut(material_handle) else {
-    //         continue;
-    //     };
-
-    //     material.base_color = Color::srgb(0.0, 0.0, 1.0).into(); // Blue
-    // }
 }
+
+// fn customize_scene_materials(
+//     trigger: Trigger<SceneInstanceReady>,
+//     gltf_assets: Res<Assets<Gltf>>,
+//     my_assets: Res<MyAssets>,
+//     mut extended_materials: ResMut<Assets<ExtendedMaterial<StandardMaterial, MyExtension>>>,
+//     mut standard_materials: ResMut<Assets<StandardMaterial>>,
+//     mut load_shaders: ResMut<LoadShaders>,
+//     mut q_scenes: Query<(Entity), With<SceneRoot>>,
+//     mut cmds: Commands,
+//     q_children: Query<&Children>,
+//     q_materials: Query<&MeshMaterial3d<StandardMaterial>>,
+// ) {
+//     println!("SceneInstanceReady!");
+//     for d in q_children.iter_descendants(trigger.entity()) {
+//         if let Some(material) = q_materials
+//             .get(d)
+//             .ok()
+//             .and_then(|id| standard_materials.get_mut(id.id()))
+//         {
+//             // println!("got")
+//             let mut new_material = material.clone();
+//             new_material.base_color = Color::srgb(0.0, 0.0, 1.0).into(); // Blue
+
+//             let new = MeshMaterial3d(extended_materials.add(ExtendedMaterial {
+//                 base: material.clone(),
+//                 extension: MyExtension {
+//                     tint: YELLOW.into(),
+//                     tint_strength: 0.1,
+//                 },
+//             }));
+
+//             // cmds.entity(d).despawn();
+//             // cmds.entity(d).insert(new);
+//         }
+//     }
+
+//     // let Some(gltf_asset) = gltf_assets.get(&my_assets.tank_gltf) else {
+//     //     return;
+//     // };
+
+//     // load_shaders.0 = false;
+
+//     // for material_handle in &gltf_asset.materials {
+//     //     let Some(material) = standard_materials.get_mut(material_handle) else {
+//     //         continue;
+//     //     };
+
+//     //     material.base_color = Color::srgb(0.0, 0.0, 1.0).into(); // Blue
+//     // }
+// }
