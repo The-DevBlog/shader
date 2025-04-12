@@ -1,3 +1,4 @@
+#import bevy_pbr::mesh_functions::{get_world_from_local, mesh_position_local_to_clip}
 // @group(0) @binding(0)
 // var<uniform> ViewProj: mat4x4<f32>;
 
@@ -45,13 +46,20 @@ var<uniform> base_color: vec4<f32>;
 
 @vertex
 fn vertex(
+    @builtin(instance_index) instance_index: u32,
     @location(0) position: vec3<f32>,
     @location(1) normal: vec3<f32>,
     @location(2) uv: vec2<f32>,
 ) -> VertexOutput {
     var out: VertexOutput;
     // Transform the vertex position to clip space.
-    out.clip_position = ViewProj * vec4<f32>(position, 1.0);
+    // out.clip_position = ViewProj * vec4<f32>(position, 1.0);
+
+    out.clip_position = mesh_position_local_to_clip(
+        get_world_from_local(instance_index),
+        vec4<f32>(position, 1.0),
+    );
+
     // Pass the normal unchanged.
     out.world_normal = normal;
     out.uv = uv;
