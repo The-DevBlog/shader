@@ -1,15 +1,4 @@
 #import bevy_pbr::mesh_functions::{get_world_from_local, mesh_position_local_to_clip}
-// @group(0) @binding(0)
-// var<uniform> ViewProj: mat4x4<f32>;
-
-// @group(2) @binding(0)
-// var<uniform> material_color: vec4<f32>;
-
-// @group(2) @binding(100)
-// var<uniform> tint: vec4<f32>;
-
-// @group(2) @binding(101)
-// var<uniform> tint_strength: f32;
 
 // --- Vertex Input/Output Structures ---
 struct VertexOutput {
@@ -53,8 +42,6 @@ fn vertex(
 ) -> VertexOutput {
     var out: VertexOutput;
     // Transform the vertex position to clip space.
-    // out.clip_position = ViewProj * vec4<f32>(position, 1.0);
-
     out.clip_position = mesh_position_local_to_clip(
         get_world_from_local(instance_index),
         vec4<f32>(position, 1.0),
@@ -95,27 +82,3 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
 
     return vec4<f32>(final_color, tex_color.a);
 }
-
-// @fragment
-// fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
-//     // Define a fixed directional light.
-//     let light_direction = normalize(vec3<f32>(0.5, 0.5, 1.0));
-    
-//     // Normalize the normal passed from the vertex shader.
-//     let normalized_normal = normalize(in.world_normal);
-    
-//     // Calculate the diffuse lighting using the dot product.
-//     let diffuse = max(dot(normalized_normal, light_direction), 0.0);
-    
-//     // Add a small ambient light so that surfaces aren’t pitch black.
-//     let ambient = 0.1;
-    
-//     // Combine ambient and diffuse lighting.
-//     let lighting = ambient + diffuse;
-    
-//     // Compute the final color by modulating the material's base color.
-//     let final_color = material_color.rgb * lighting;
-    
-//     // Return the final color with the original alpha component.
-//     return vec4<f32>(final_color, material_color.a);
-// }

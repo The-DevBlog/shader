@@ -78,7 +78,7 @@ fn setup(
             },
             extension: MyExtension {
                 tint: YELLOW.into(),
-                tint_strength: 0.8,
+                tint_strength: 0.0,
             },
         })),
     ));
@@ -168,7 +168,7 @@ fn customize_scene_materials(
                     base: modified_std,
                     extension: MyExtension {
                         tint: YELLOW.into(), // Your desired tint color.
-                        tint_strength: 0.7,  // How strongly to apply the tint.
+                        tint_strength: 0.0,  // How strongly to apply the tint.
                     },
                 });
 
