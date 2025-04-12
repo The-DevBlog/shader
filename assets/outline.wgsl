@@ -191,7 +191,7 @@ fn fragment(in: FullscreenVertexOutput) -> @location(0) vec4<f32> {
     var o3 = outline_at_scale(3.0, in.uv) * o3mix;
     var o = max(o1, max(o2, o3));
 
-    var c = mix(toon_colour(in.uv), vec4f(0.1, 0.1, 0.1, 1.0), o);
+    var c = mix(toon_colour(in.uv), vec4f(0.0, 0.0, 0.0, 0.0), o);
     //0.8752 -> 0.87515 == 1.0 -> 0.0
     //0.00005 -> 0.0
     //1.0 -> 0.0

@@ -3,6 +3,10 @@ use bevy::{
         css::{BLUE, GREEN, LIGHT_BLUE, RED, WHITE, YELLOW},
         tailwind::BLUE_600,
     },
+    core_pipeline::{
+        fxaa::{Fxaa, Sensitivity},
+        prepass::{DepthPrepass, NormalPrepass},
+    },
     pbr::{ExtendedMaterial, MaterialExtension, OpaqueRendererMethod},
     prelude::*,
     render::render_resource::{AsBindGroup, ShaderRef},
@@ -14,15 +18,16 @@ use bevy_third_person_camera::{
 
 mod PostProcessing;
 
-use PostProcessing::PostProcessingPlugin;
+use PostProcessing::{PostProcessingPlugin, ToonPostProcessSettings};
 
 const TINT_STRENGTH: f32 = 0.8;
 fn main() {
     App::new()
         .init_resource::<MyAssets>()
+        .add_plugins(DefaultPlugins)
         .add_plugins((
             PostProcessingPlugin,
-            DefaultPlugins,
+            // DefaultPlugins,
             ThirdPersonCameraPlugin,
             MaterialPlugin::<ExtendedMaterial<StandardMaterial, MyExtension>>::default(),
         ))
@@ -78,13 +83,13 @@ fn setup(
     mut cmds: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut extended_materials: ResMut<Assets<ExtendedMaterial<StandardMaterial, MyExtension>>>,
-    mut standard_materails: ResMut<Assets<StandardMaterial>>,
+    mut standard_materials: ResMut<Assets<StandardMaterial>>,
 ) {
     // ground
     let color = Color::srgb(0.44, 0.75, 0.44);
     cmds.spawn((
         Mesh3d(meshes.add(Plane3d::default().mesh().size(150.0, 150.0))),
-        MeshMaterial3d(standard_materails.add(StandardMaterial::from_color(color))),
+        MeshMaterial3d(standard_materials.add(StandardMaterial::from_color(color))),
         // MeshMaterial3d(extended_materials.add(ExtendedMaterial {
         //     base: StandardMaterial {
         //         base_color: color.into(),
@@ -102,6 +107,15 @@ fn setup(
     // camera
     cmds.spawn((
         Camera3d::default(),
+        ToonPostProcessSettings::default(),
+        DepthPrepass,
+        NormalPrepass,
+        Msaa::Off,
+        Fxaa {
+            enabled: true,
+            edge_threshold: Sensitivity::Ultra,
+            edge_threshold_min: Sensitivity::Ultra,
+        },
         ThirdPersonCamera {
             zoom: Zoom::new(30.0, 100.0),
             ..default()
@@ -109,19 +123,19 @@ fn setup(
         Transform::from_xyz(20.0, 20.0, 20.0).looking_at(Vec3::ZERO, Vec3::Y),
     ));
 
-    // cmds.spawn((
-    //     DirectionalLight {
-    //         illuminance: 1000.0,
-    //         shadows_enabled: true,
-    //         ..default()
-    //     },
-    //     Transform::from_rotation(Quat::from_euler(
-    //         EulerRot::YXZ,
-    //         150.0f32.to_radians(),
-    //         -40.0f32.to_radians(),
-    //         0.0,
-    //     )),
-    // ));
+    cmds.spawn((
+        DirectionalLight {
+            illuminance: 1000.0,
+            shadows_enabled: true,
+            ..default()
+        },
+        Transform::from_rotation(Quat::from_euler(
+            EulerRot::YXZ,
+            150.0f32.to_radians(),
+            -40.0f32.to_radians(),
+            0.0,
+        )),
+    ));
 }
 
 #[derive(Asset, AsBindGroup, Reflect, Debug, Clone)]
