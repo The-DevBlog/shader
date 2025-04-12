@@ -12,6 +12,7 @@ use bevy_third_person_camera::{
     ThirdPersonCamera, ThirdPersonCameraPlugin, ThirdPersonCameraTarget, Zoom,
 };
 
+const TINT_STRENGTH: f32 = 0.8;
 fn main() {
     App::new()
         .init_resource::<MyAssets>()
@@ -46,19 +47,25 @@ fn move_cube(
     };
 
     let time = time.delta_secs();
-    let speed = 2.0;
+    let speed = 10.0;
 
     if input.pressed(KeyCode::KeyA) {
-        transform.translation.x -= 1.0 * time * speed;
+        transform.translation.x -= time * speed;
     }
     if input.pressed(KeyCode::KeyD) {
-        transform.translation.x += 1.0 * time * speed;
+        transform.translation.x += time * speed;
     }
     if input.pressed(KeyCode::KeyW) {
-        transform.translation.y += 1.0 * time * speed;
+        transform.translation.z += time * speed;
     }
     if input.pressed(KeyCode::KeyS) {
-        transform.translation.y -= 1.0 * time * speed;
+        transform.translation.z -= time * speed;
+    }
+    if input.pressed(KeyCode::KeyQ) {
+        transform.rotate_local_y(time * speed);
+    }
+    if input.pressed(KeyCode::KeyE) {
+        transform.rotate_local_y(time * -speed);
     }
 }
 
@@ -77,8 +84,9 @@ fn setup(
                 ..Default::default()
             },
             extension: MyExtension {
+                base_color: color.into(),
                 tint: YELLOW.into(),
-                tint_strength: 0.0,
+                tint_strength: TINT_STRENGTH,
             },
         })),
     ));
@@ -92,24 +100,27 @@ fn setup(
         Transform::from_xyz(20.0, 20.0, 20.0).looking_at(Vec3::ZERO, Vec3::Y),
     ));
 
-    cmds.spawn((
-        DirectionalLight {
-            illuminance: 1000.0,
-            shadows_enabled: true,
-            ..default()
-        },
-        Transform::from_rotation(Quat::from_euler(
-            EulerRot::YXZ,
-            150.0f32.to_radians(),
-            -40.0f32.to_radians(),
-            0.0,
-        )),
-    ));
+    // cmds.spawn((
+    //     DirectionalLight {
+    //         illuminance: 1000.0,
+    //         shadows_enabled: true,
+    //         ..default()
+    //     },
+    //     Transform::from_rotation(Quat::from_euler(
+    //         EulerRot::YXZ,
+    //         150.0f32.to_radians(),
+    //         -40.0f32.to_radians(),
+    //         0.0,
+    //     )),
+    // ));
 }
 
 #[derive(Asset, AsBindGroup, Reflect, Debug, Clone)]
 struct MyExtension {
     // 0 - 99 reserved for base material
+    #[uniform(100)]
+    base_color: LinearRgba,
+
     #[uniform(101)]
     tint: LinearRgba,
 
@@ -156,19 +167,21 @@ fn customize_scene_materials(
     for entity in q_children.iter_descendants(trigger.entity()) {
         // Try to get a MeshMaterial3d<StandardMaterial> component on this entity.
         if let Ok((ent, mesh_mat)) = q_mesh_material.get(entity) {
+            println!("Changing");
             // Use the handle from the MeshMaterial3d to fetch the StandardMaterial.
             if let Some(std_mat) = standard_materials.get(mesh_mat.id()) {
                 // Optionally, clone and modify the StandardMaterial.
                 let modified_std = std_mat.clone();
                 // (For example, you could change the base color here before wrapping.)
                 // modified_std.base_color = Color::rgb(0.0, 0.0, 1.0).into();
-
+                let base_color = modified_std.base_color;
                 // Now create an ExtendedMaterial that wraps the StandardMaterial.
                 let new_extended_handle = extended_materials.add(ExtendedMaterial {
                     base: modified_std,
                     extension: MyExtension {
-                        tint: YELLOW.into(), // Your desired tint color.
-                        tint_strength: 0.0,  // How strongly to apply the tint.
+                        base_color: base_color.into(),
+                        tint: YELLOW.into(),          // Your desired tint color.
+                        tint_strength: TINT_STRENGTH, // How strongly to apply the tint.
                     },
                 });
 

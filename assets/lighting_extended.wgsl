@@ -47,18 +47,14 @@ fn vertex(
         vec4<f32>(position, 1.0),
     );
 
-    // Pass the normal unchanged.
-    out.world_normal = normal;
+    out.world_normal = normalize((get_world_from_local(instance_index) * vec4<f32>(normal, 0.0)).xyz);
     out.uv = uv;
-    // Pass the world-space position, if you need it.
-    // out.world_pos = position;
     return out;
 }
 
 @fragment
 fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     // --- Lighting Computation ---
-    // Define a fixed directional light.
     let light_direction = normalize(vec3<f32>(0.5, 0.5, 1.0));
     let normal = normalize(in.world_normal);
     let diffuse = max(dot(normal, light_direction), 0.0);
@@ -67,17 +63,16 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
 
     // --- Base Color from Texture ---
     // Sample the base texture using the UV coordinates.
-    // You can also decide to blend the uniform base_color if no texture is provided.
     let tex_color = textureSample(base_color_texture, base_color_sampler, in.uv);
-
-    // Multiply the texture color by the lighting to get a lit base color.
-    let lit_color = tex_color.rgb * lighting;
+    // Multiply the texture sample by the fallback base_color uniform.
+    // For objects without an explicit texture, base_color holds the StandardMaterial base color (green).
+    let effective_color = tex_color.rgb * base_color.rgb;
+    
+    // Apply the lighting.
+    let lit_color = effective_color * lighting;
 
     // --- Tint Application ---
-    // Multiply the lit color by the tint color to produce a tinted version.
     let tinted_color = lit_color * tint.rgb;
-    // Linearly interpolate between the lit base color and the tinted variant,
-    // using tint_strength (0.0 = no tint, 1.0 = full tint).
     let final_color = mix(lit_color, tinted_color, tint_strength);
 
     return vec4<f32>(final_color, tex_color.a);
