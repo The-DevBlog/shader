@@ -23,12 +23,12 @@ fn luminance(col: vec4<f32>) -> f32 {
 @fragment
 fn fragment(input: FullscreenVertexOutput) -> @location(0) vec4<f32> {
     // SETTINGS for the stylized effect
-    let colorSteps: f32 = 255.0;               // Number of quantization steps for posterization
+    let colorSteps: f32 = 60.0;               // Number of quantization steps for posterization
     let edgeThreshold: f32 = 0.01;            // Base threshold for luminance (Sobel) edge detection
     let edgeColor: vec4<f32> = vec4<f32>(0.0, 0.0, 0.0, 1.0); // Outline color (red here)
-    let normalEdgeThreshold: f32 = 5.1;      // Base threshold for normal difference edge detection
-    let depthEdgeThreshold: f32 = 0.1;       // Base threshold for depth difference edge detection
-    let lineThickness: f32 = 2.0;
+    let normalEdgeThreshold: f32 = 1.0;      // Base threshold for normal difference edge detection
+    let depthEdgeThreshold: f32 = 0.0;       // Base threshold for depth difference edge detection
+    let lineThickness: f32 = 1.0;
 
 
     // Fetch the center pixel's color.
@@ -134,6 +134,8 @@ fn fragment(input: FullscreenVertexOutput) -> @location(0) vec4<f32> {
     // Combine all edge detection results into a smooth composite edge mask.
     //
     let compositeEdge = max(lumEdge, max(normalEdge, depthEdge));
+    let edgeStrength: f32 = 300.0; // Adjust this value as needed.
+    let boostedEdge = clamp(compositeEdge * edgeStrength, 0.0, 1.0);
 
     //
     // Posterization: Quantize the center color.
@@ -142,6 +144,7 @@ fn fragment(input: FullscreenVertexOutput) -> @location(0) vec4<f32> {
     let baseColor = vec4<f32>(quantized, 1.0);
 
     // Blend in the outline (edge) color using the composite edge mask.
-    let finalColor = mix(baseColor, edgeColor, compositeEdge);
+    // let finalColor = mix(baseColor, edgeColor, compositeEdge);
+    let finalColor = mix(baseColor, edgeColor, boostedEdge);
     return finalColor;
 }
