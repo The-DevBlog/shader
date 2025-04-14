@@ -134,7 +134,7 @@ fn fragment(input: FullscreenVertexOutput) -> @location(0) vec4<f32> {
     // Combine all edge detection results into a smooth composite edge mask.
     //
     let compositeEdge = max(lumEdge, max(normalEdge, depthEdge));
-    let edgeStrength: f32 = 300.0; // Adjust this value as needed.
+    let edgeStrength: f32 = 100.0; // Adjust this value as needed.
     let boostedEdge = clamp(compositeEdge * edgeStrength, 0.0, 1.0);
 
     //
