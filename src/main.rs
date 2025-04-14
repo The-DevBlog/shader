@@ -28,7 +28,7 @@ fn main() {
         .init_resource::<MyAssets>()
         .add_plugins(DefaultPlugins)
         .add_plugins((
-            TintShaderPlugin,
+            // TintShaderPlugin,
             // DefaultPlugins,
             StylizedShaderPlugin,
             ThirdPersonCameraPlugin,
