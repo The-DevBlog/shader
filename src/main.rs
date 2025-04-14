@@ -110,7 +110,7 @@ fn setup(
     // camera
     cmds.spawn((
         Camera3d::default(),
-        TintShaderSettings::default(),
+        // TintShaderSettings::default(),
         StylizedShaderSettings::default(),
         DepthPrepass,
         NormalPrepass,
