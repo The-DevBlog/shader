@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-bevy = "0.15.3"
+bevy = { version = "0.15.3", features = ["file_watcher"] }
 bevy_rts_camera = "0.9.1"
 bevy_third_person_camera = "0.2.0"
 

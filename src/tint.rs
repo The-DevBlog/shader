@@ -25,12 +25,12 @@ use bevy::{
 };
 
 /// This example uses a shader source file from the assets subdirectory
-const SHADER_ASSET_PATH: &str = "outline.wgsl";
+const SHADER_ASSET_PATH: &str = "tint.wgsl";
 
 /// It is generally encouraged to set up post processing effects as a plugin
-pub struct PostProcessingPlugin;
+pub struct TintShaderPlugin;
 
-impl Plugin for PostProcessingPlugin {
+impl Plugin for TintShaderPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins((
             // The settings will be a component that lives in the main world but will
@@ -39,11 +39,11 @@ impl Plugin for PostProcessingPlugin {
             // This plugin will take care of extracting it automatically.
             // It's important to derive [`ExtractComponent`] on [`PostProcessingSettings`]
             // for this plugin to work correctly.
-            ExtractComponentPlugin::<ToonPostProcessSettings>::default(),
+            ExtractComponentPlugin::<TintShaderSettings>::default(),
             // The settings will also be the data used in the shader.
             // This plugin will prepare the component for the GPU by creating a uniform buffer
             // and writing the data to that buffer every frame.
-            UniformComponentPlugin::<ToonPostProcessSettings>::default(),
+            UniformComponentPlugin::<TintShaderSettings>::default(),
         ));
 
         // We need to get the render app from the main app
@@ -113,10 +113,10 @@ impl ViewNode for PostProcessNode {
         &'static ViewTarget,
         &'static ViewPrepassTextures,
         // This makes sure the node only runs on cameras with the PostProcessSettings component
-        &'static ToonPostProcessSettings,
+        &'static TintShaderSettings,
         // As there could be multiple post processing components sent to the GPU (one per camera),
         // we need to get the index of the one that is associated with the current view.
-        &'static DynamicUniformIndex<ToonPostProcessSettings>,
+        &'static DynamicUniformIndex<TintShaderSettings>,
         &'static ViewUniformOffset,
     );
 
@@ -150,7 +150,7 @@ impl ViewNode for PostProcessNode {
         };
 
         // Get the settings uniform binding
-        let settings_uniforms = world.resource::<ComponentUniforms<ToonPostProcessSettings>>();
+        let settings_uniforms = world.resource::<ComponentUniforms<TintShaderSettings>>();
         let view_uniforms = world.resource::<ViewUniforms>();
         let Some(view_uniforms) = view_uniforms.uniforms.binding() else {
             return Ok(());
@@ -253,7 +253,7 @@ impl FromWorld for PostProcessPipeline {
                     // The sampler that will be used to sample the screen texture
                     sampler(SamplerBindingType::Filtering),
                     // The settings uniform that will control the effect
-                    uniform_buffer::<ToonPostProcessSettings>(true),
+                    uniform_buffer::<TintShaderSettings>(true),
                     texture_depth_2d(),
                     texture_2d(TextureSampleType::Float { filterable: true }),
                     uniform_buffer::<ViewUniform>(true),
@@ -306,26 +306,28 @@ impl FromWorld for PostProcessPipeline {
 
 // This is the component that will get passed to the shader
 #[derive(Component, Clone, Copy, ExtractComponent, ShaderType)]
-pub struct ToonPostProcessSettings {
-    pub depth_threshold: f32,
-    pub depth_threshold_depth_mul: f32, // If something is further away, it should require more depth
-    pub depth_normal_threshold: f32,    // If at a glazing angle, depth threshold should be harsher
-    pub depth_normal_threshold_mul: f32, // If at a glazing angle, depth threshold should be harsher
-    pub normal_threshold: f32,
-    pub colour_threshold: f32,
-    pub sampling_scale: f32,
+pub struct TintShaderSettings {
+    pub placeholder: f32,
+    // pub depth_threshold: f32,
+    // pub depth_threshold_depth_mul: f32, // If something is further away, it should require more depth
+    // pub depth_normal_threshold: f32,    // If at a glazing angle, depth threshold should be harsher
+    // pub depth_normal_threshold_mul: f32, // If at a glazing angle, depth threshold should be harsher
+    // pub normal_threshold: f32,
+    // pub colour_threshold: f32,
+    // pub sampling_scale: f32,
 }
 
-impl Default for ToonPostProcessSettings {
+impl Default for TintShaderSettings {
     fn default() -> Self {
         Self {
-            depth_threshold: 1.0,
-            depth_threshold_depth_mul: 1.0,
-            depth_normal_threshold: 0.5,
-            depth_normal_threshold_mul: 30.0,
-            normal_threshold: 0.4,
-            colour_threshold: 0.2,
-            sampling_scale: 3.0,
+            placeholder: 0.0,
+            // depth_threshold: 1.0,
+            // depth_threshold_depth_mul: 1.0,
+            // depth_normal_threshold: 0.5,
+            // depth_normal_threshold_mul: 30.0,
+            // normal_threshold: 0.4,
+            // colour_threshold: 0.2,
+            // sampling_scale: 3.0,
         }
     }
 }

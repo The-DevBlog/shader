@@ -16,9 +16,11 @@ use bevy_third_person_camera::{
     ThirdPersonCamera, ThirdPersonCameraPlugin, ThirdPersonCameraTarget, Zoom,
 };
 
-mod PostProcessing;
+mod stylized;
+mod tint;
 
-use PostProcessing::{PostProcessingPlugin, ToonPostProcessSettings};
+use stylized::{StylizedShaderPlugin, StylizedShaderSettings};
+use tint::{TintShaderPlugin, TintShaderSettings};
 
 const TINT_STRENGTH: f32 = 0.8;
 fn main() {
@@ -26,8 +28,9 @@ fn main() {
         .init_resource::<MyAssets>()
         .add_plugins(DefaultPlugins)
         .add_plugins((
-            PostProcessingPlugin,
+            TintShaderPlugin,
             // DefaultPlugins,
+            StylizedShaderPlugin,
             ThirdPersonCameraPlugin,
             MaterialPlugin::<ExtendedMaterial<StandardMaterial, MyExtension>>::default(),
         ))
@@ -107,7 +110,8 @@ fn setup(
     // camera
     cmds.spawn((
         Camera3d::default(),
-        ToonPostProcessSettings::default(),
+        TintShaderSettings::default(),
+        StylizedShaderSettings::default(),
         DepthPrepass,
         NormalPrepass,
         Msaa::Off,
