@@ -121,7 +121,7 @@ fn setup(
             edge_threshold_min: Sensitivity::Ultra,
         },
         ThirdPersonCamera {
-            zoom: Zoom::new(30.0, 100.0),
+            zoom: Zoom::new(30.0, 200.0),
             ..default()
         },
         Transform::from_xyz(20.0, 20.0, 20.0).looking_at(Vec3::ZERO, Vec3::Y),
