@@ -1,5 +1,12 @@
 #import bevy_core_pipeline::fullscreen_vertex_shader::FullscreenVertexOutput
 
+const colorSteps: f32 = 60.0;               // Number of quantization steps for posterization
+const edgeThreshold: f32 = 0.001;            // Base threshold for luminance (Sobel) edge detection
+const edgeColor: vec4<f32> = vec4<f32>(0.0, 0.0, 0.0, 1.0); // Outline color (red here)
+const normalEdgeThreshold: f32 = 1.0;      // Base threshold for normal difference edge detection
+const depthEdgeThreshold: f32 = 1.0;       // Base threshold for depth difference edge detection
+const lineThickness: f32 = 1.0;
+
 // Scene color texture and sampler.
 @group(0) @binding(0)
 var sceneTexture : texture_2d<f32>;
@@ -22,15 +29,6 @@ fn luminance(col: vec4<f32>) -> f32 {
 
 @fragment
 fn fragment(input: FullscreenVertexOutput) -> @location(0) vec4<f32> {
-    // SETTINGS for the stylized effect
-    let colorSteps: f32 = 60.0;               // Number of quantization steps for posterization
-    let edgeThreshold: f32 = 0.001;            // Base threshold for luminance (Sobel) edge detection
-    let edgeColor: vec4<f32> = vec4<f32>(0.0, 0.0, 0.0, 1.0); // Outline color (red here)
-    let normalEdgeThreshold: f32 = 1.0;      // Base threshold for normal difference edge detection
-    let depthEdgeThreshold: f32 = 1.0;       // Base threshold for depth difference edge detection
-    let lineThickness: f32 = 1.0;
-
-
     // Fetch the center pixel's color.
     let centerColor = textureSample(sceneTexture, sceneSampler, input.uv);
     // Define a pixel's size in UV space (based on a target resolution; adjust if needed).
