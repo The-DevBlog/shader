@@ -34,7 +34,7 @@ fn fragment(input: FullscreenVertexOutput) -> @location(0) vec4<f32> {
     // Fetch the center pixel's color.
     let centerColor = textureSample(sceneTexture, sceneSampler, input.uv);
     // Define a pixel's size in UV space (based on a target resolution; adjust if needed).
-    let pixelSize = vec2<f32>(1.0 / 1280.0, 1.0 / 720.0);
+    let pixelSize = vec2<f32>(1.0 / 1920.0, 1.0 / 1080.0);
     // Multiply by lineThickness to adjust the sampling radius.
     let adjustedPixelSize = pixelSize * lineThickness;
 
@@ -42,12 +42,12 @@ fn fragment(input: FullscreenVertexOutput) -> @location(0) vec4<f32> {
     // Luminance Edge Detection (using a Sobel filter)
     //
     let c0 = textureSample(sceneTexture, sceneSampler, input.uv + vec2(-adjustedPixelSize.x, -adjustedPixelSize.y));
-    let c1 = textureSample(sceneTexture, sceneSampler, input.uv + vec2(             0.0, -adjustedPixelSize.y));
+    let c1 = textureSample(sceneTexture, sceneSampler, input.uv + vec2(0.0, -adjustedPixelSize.y));
     let c2 = textureSample(sceneTexture, sceneSampler, input.uv + vec2( adjustedPixelSize.x, -adjustedPixelSize.y));
     let c3 = textureSample(sceneTexture, sceneSampler, input.uv + vec2(-adjustedPixelSize.x, 0.0));
     let c5 = textureSample(sceneTexture, sceneSampler, input.uv + vec2( adjustedPixelSize.x, 0.0));
     let c6 = textureSample(sceneTexture, sceneSampler, input.uv + vec2(-adjustedPixelSize.x, adjustedPixelSize.y));
-    let c7 = textureSample(sceneTexture, sceneSampler, input.uv + vec2(             0.0, adjustedPixelSize.y));
+    let c7 = textureSample(sceneTexture, sceneSampler, input.uv + vec2(0.0, adjustedPixelSize.y));
     let c8 = textureSample(sceneTexture, sceneSampler, input.uv + vec2( adjustedPixelSize.x, adjustedPixelSize.y));
 
     let lum0 = luminance(c0);
