@@ -98,7 +98,7 @@ fn fragment(input: FullscreenVertexOutput) -> @location(0) vec4<f32> {
     // Depth Edge Detection using textureLoad
     //
     // For depth, we must convert the UV to pixel coordinates.
-    let resolution = vec2<f32>(1280.0, 720.0); // Target resolution (adjust as needed)
+    let resolution = vec2<f32>(1920.0, 1080.0); // Target resolution (adjust as needed)
     // Get the center pixel coordinate (in integer pixels)
     let centerCoord = vec2<i32>(floor(input.uv * resolution));
     // Compute the offset for depth detection in pixel units.
