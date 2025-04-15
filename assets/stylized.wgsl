@@ -24,10 +24,10 @@ fn luminance(col: vec4<f32>) -> f32 {
 fn fragment(input: FullscreenVertexOutput) -> @location(0) vec4<f32> {
     // SETTINGS for the stylized effect
     let colorSteps: f32 = 60.0;               // Number of quantization steps for posterization
-    let edgeThreshold: f32 = 0.01;            // Base threshold for luminance (Sobel) edge detection
+    let edgeThreshold: f32 = 0.001;            // Base threshold for luminance (Sobel) edge detection
     let edgeColor: vec4<f32> = vec4<f32>(0.0, 0.0, 0.0, 1.0); // Outline color (red here)
     let normalEdgeThreshold: f32 = 1.0;      // Base threshold for normal difference edge detection
-    let depthEdgeThreshold: f32 = 0.0;       // Base threshold for depth difference edge detection
+    let depthEdgeThreshold: f32 = 1.0;       // Base threshold for depth difference edge detection
     let lineThickness: f32 = 1.0;
 
 
@@ -92,7 +92,7 @@ fn fragment(input: FullscreenVertexOutput) -> @location(0) vec4<f32> {
                         max(max(1.0 - dot2, 1.0 - dot3),
                             max(1.0 - dot5, max(1.0 - dot6, max(1.0 - dot7, 1.0 - dot8))))
                       );
-    let normalEdge = smoothstep(normalEdgeThreshold, normalEdgeThreshold + 0.05, normalDiff);
+    let normalEdge = smoothstep(normalEdgeThreshold, normalEdgeThreshold + 15.0, normalDiff);
 
     //
     // Depth Edge Detection using textureLoad
@@ -128,13 +128,13 @@ fn fragment(input: FullscreenVertexOutput) -> @location(0) vec4<f32> {
                             )
                         )
                      );
-    let depthEdge = smoothstep(depthEdgeThreshold, depthEdgeThreshold + 0.05, depthDiff);
+    let depthEdge = smoothstep(depthEdgeThreshold, depthEdgeThreshold + 5.0, depthDiff);
 
     //
     // Combine all edge detection results into a smooth composite edge mask.
     //
     let compositeEdge = max(lumEdge, max(normalEdge, depthEdge));
-    let edgeStrength: f32 = 100.0; // Adjust this value as needed.
+    let edgeStrength: f32 = 5.0; // Adjust this value as needed.
     let boostedEdge = clamp(compositeEdge * edgeStrength, 0.0, 1.0);
 
     //
