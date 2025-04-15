@@ -1,5 +1,6 @@
 #import bevy_core_pipeline::fullscreen_vertex_shader::FullscreenVertexOutput
 
+// settings
 const colorSteps: f32 = 60.0;               // Number of quantization steps for posterization
 const edgeThreshold: f32 = 0.001;            // Base threshold for luminance (Sobel) edge detection
 const edgeColor: vec4<f32> = vec4<f32>(0.0, 0.0, 0.0, 1.0); // Outline color (red here)
@@ -63,7 +64,10 @@ fn luminanceEdgeDetection(adjustedPixelSize: vec2<f32>, centerColor: vec4<f32>, 
 }
 
 fn normalEdgeDetection(adjustedPixelSize: vec2<f32>, uv: vec2<f32>) -> f32 {
+    // Fetch the center pixel's normal.
     let centerNormal = textureSample(normalTexture, sceneSampler, uv).rgb;
+
+    // Sample normals from neighboring pixels.
     let n0 = textureSample(normalTexture, sceneSampler, uv + vec2(-adjustedPixelSize.x, -adjustedPixelSize.y)).rgb;
     let n1 = textureSample(normalTexture, sceneSampler, uv + vec2(             0.0, -adjustedPixelSize.y)).rgb;
     let n2 = textureSample(normalTexture, sceneSampler, uv + vec2( adjustedPixelSize.x, -adjustedPixelSize.y)).rgb;
@@ -82,21 +86,23 @@ fn normalEdgeDetection(adjustedPixelSize: vec2<f32>, uv: vec2<f32>) -> f32 {
     let dot7 = dot(centerNormal, n7);
     let dot8 = dot(centerNormal, n8);
 
+    // Compute the difference between the center normal and the surrounding normals.
     let normalDiff = max(
         max(1.0 - dot0, 1.0 - dot1),
         max(max(1.0 - dot2, 1.0 - dot3),
         max(1.0 - dot5, max(1.0 - dot6, max(1.0 - dot7, 1.0 - dot8))))
     );
 
+    // Apply a smoothstep function to create a soft edge effect.
     let normalEdge = smoothstep(normalEdgeThreshold, normalEdgeThreshold + 15.0, normalDiff);
 
     return normalEdge;
 }
 
 fn depthEdgeDetection(adjustedPixelSize: vec2<f32>, uv: vec2<f32>) -> f32 {
+    // Fetch the center pixel's depth.
     let centerCoord = vec2<i32>(floor(uv * resolution));
-    // Compute the offset for depth detection in pixel units.
-    // Since adjustedPixelSize in UV multiplied by resolution yields the pixel offset:
+
     let depthOffset = vec2<i32>(
         i32(round(adjustedPixelSize.x * resolution.x)),
         i32(round(adjustedPixelSize.y * resolution.y))
@@ -113,6 +119,7 @@ fn depthEdgeDetection(adjustedPixelSize: vec2<f32>, uv: vec2<f32>) -> f32 {
     let d7 = textureLoad(depthTexture, centerCoord + vec2<i32>( 0, depthOffset.y), 0);
     let d8 = textureLoad(depthTexture, centerCoord + vec2<i32>( depthOffset.x, depthOffset.y), 0);
 
+    // Compute the difference between the center depth and the surrounding depths.
     let depthDiff = max(
         max(abs(centerDepth - d0), abs(centerDepth - d1)),
         max(
@@ -124,6 +131,7 @@ fn depthEdgeDetection(adjustedPixelSize: vec2<f32>, uv: vec2<f32>) -> f32 {
         )
     );
 
+    // Apply a smoothstep function to create a soft edge effect.
     let depthEdge = smoothstep(depthEdgeThreshold, depthEdgeThreshold + 5.0, depthDiff);
 
     return depthEdge;
@@ -131,32 +139,23 @@ fn depthEdgeDetection(adjustedPixelSize: vec2<f32>, uv: vec2<f32>) -> f32 {
 
 @fragment
 fn fragment(input: FullscreenVertexOutput) -> @location(0) vec4<f32> {
-    // Fetch the center pixel's color.
     let centerColor = textureSample(sceneTexture, sceneSampler, input.uv);
-    // Define a pixel's size in UV space (based on a target resolution; adjust if needed).
     let pixelSize = vec2<f32>(1.0 / resolution.x, 1.0 / resolution.y);
-    // Multiply by lineThickness to adjust the sampling radius.
     let adjustedPixelSize = pixelSize * lineThickness;
 
     let lumEdge = luminanceEdgeDetection(adjustedPixelSize, centerColor, input.uv);
     let normalEdge = normalEdgeDetection(adjustedPixelSize, input.uv);
     let depthEdge = depthEdgeDetection(adjustedPixelSize, input.uv);
 
-    //
     // Combine all edge detection results into a smooth composite edge mask.
-    //
     let compositeEdge = max(lumEdge, max(normalEdge, depthEdge));
     let edgeStrength: f32 = 5.0; // Adjust this value as needed.
-    let boostedEdge = clamp(compositeEdge * edgeStrength, 0.0, 1.0);
 
-    //
     // Posterization: Quantize the center color.
-    //
     let quantized = floor(centerColor.rgb * colorSteps + 0.5) / colorSteps;
     let baseColor = vec4<f32>(quantized, 1.0);
 
     // Blend in the outline (edge) color using the composite edge mask.
-    // let finalColor = mix(baseColor, edgeColor, compositeEdge);
-    let finalColor = mix(baseColor, edgeColor, boostedEdge);
+    let finalColor = mix(baseColor, edgeColor, compositeEdge);
     return finalColor;
 }
