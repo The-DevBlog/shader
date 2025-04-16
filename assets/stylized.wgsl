@@ -1,172 +1,69 @@
 #import bevy_core_pipeline::fullscreen_vertex_shader::FullscreenVertexOutput
 
-// settings
-const colorSteps: f32 = 60.0;               // Number of quantization steps for posterization
-const edgeThreshold: f32 = 0.001;            // Base threshold for luminance (Sobel) edge detection
-const edgeColor: vec4<f32> = vec4<f32>(0.0, 0.0, 0.0, 1.0); // Outline color (red here)
-const normalEdgeThreshold: f32 = 1.0;      // Base threshold for normal difference edge detection
-const depthEdgeThreshold: f32 = 1.0;       // Base threshold for depth difference edge detection
-const lineThickness: f32 = 1.0;
-const resolution: vec2<f32> = vec2<f32>(1920.0, 1080.0); // Target resolution (adjust as needed)
+// Constants for the effect
+// const resolution: vec2<f32> = vec2<f32>(1920.0, 1080.0); // Target resolution (adjust as needed)
+// const normalThreshold: f32 = 0.01; // How sensitive the outline is to normal changes
+// const outlineColor: vec4<f32> = vec4<f32>(0.0, 0.0, 0.0, 1.0); // Outline color (black here)
+// const outlineThickness: f32 = 2.5; // Outline thickness factor. Increase for a thicker outline.
 
-struct StylizedShaderSettings {
-    zoom: f32 // Externally updated (e.g. 1.0 for default, >1.0 for zoom in, <1.0 for zoom out)
+struct OutlineShaderSettings {
+    resolution: vec2<f32>,
+    normalThreshold: f32,
+    outlineColor: vec4<f32>,
+    outlineThickness: f32,
 }
 
-@group(0) @binding(2)
-var<uniform> settings: StylizedShaderSettings; 
-
-// Scene color texture and sampler.
+// Texture and sampler bindings
 @group(0) @binding(0)
-var sceneTexture : texture_2d<f32>;
+var sceneTex: texture_2d<f32>;
 
 @group(0) @binding(1)
-var sceneSampler : sampler;
+var sceneSampler: sampler;
 
-// Depth texture is declared as a depth texture.
+@group(0) @binding(2)
+var<uniform> settings: OutlineShaderSettings;
+
+
+// Normal map from an offscreen pass.
 @group(0) @binding(3)
-var depthTexture : texture_depth_2d;
+var normalTex: texture_2d<f32>;
 
-// Normal texture (assumed to store normals as RGB values).
 @group(0) @binding(4)
-var normalTexture : texture_2d<f32>;
+var normalSampler: sampler;
 
-// A helper function to compute luminance.
-fn luminance(col: vec4<f32>) -> f32 {
-    return dot(col.rgb, vec3<f32>(0.2126, 0.7152, 0.0722));
-}
-
-// Luminance Edge Detection (using a Sobel filter)
-fn luminanceEdgeDetection(adjustedPixelSize: vec2<f32>, centerColor: vec4<f32>, uv: vec2<f32>) -> f32 {
-    // Fetch the center pixel's color.
-    let c0 = textureSample(sceneTexture, sceneSampler, uv + vec2(-adjustedPixelSize.x, -adjustedPixelSize.y));
-    let c1 = textureSample(sceneTexture, sceneSampler, uv + vec2(0.0, -adjustedPixelSize.y));
-    let c2 = textureSample(sceneTexture, sceneSampler, uv + vec2( adjustedPixelSize.x, -adjustedPixelSize.y));
-    let c3 = textureSample(sceneTexture, sceneSampler, uv + vec2(-adjustedPixelSize.x, 0.0));
-    let c5 = textureSample(sceneTexture, sceneSampler, uv + vec2( adjustedPixelSize.x, 0.0));
-    let c6 = textureSample(sceneTexture, sceneSampler, uv + vec2(-adjustedPixelSize.x, adjustedPixelSize.y));
-    let c7 = textureSample(sceneTexture, sceneSampler, uv + vec2(0.0, adjustedPixelSize.y));
-    let c8 = textureSample(sceneTexture, sceneSampler, uv + vec2( adjustedPixelSize.x, adjustedPixelSize.y));
-
-    // Compute luminance for each sampled color.
-    let lum0 = luminance(c0);
-    let lum1 = luminance(c1);
-    let lum2 = luminance(c2);
-    let lum3 = luminance(c3);
-    let lum4 = luminance(centerColor);
-    let lum5 = luminance(c5);
-    let lum6 = luminance(c6);
-    let lum7 = luminance(c7);
-    let lum8 = luminance(c8);
-
-    // Apply the Sobel filter to compute gradients in the x and y directions.
-    let gx = (lum2 + 2.0 * lum5 + lum8) - (lum0 + 2.0 * lum3 + lum6);
-    let gy = (lum6 + 2.0 * lum7 + lum8) - (lum0 + 2.0 * lum1 + lum2);
-    let edgeMagnitude = sqrt(gx * gx + gy * gy);
-
-    // Smooth the luminance edge detection rather than a hard threshold.
-    let lumEdge = smoothstep(edgeThreshold, edgeThreshold + 0.05, edgeMagnitude);
-
-    return lumEdge;
-}
-
-fn normalEdgeDetection(adjustedPixelSize: vec2<f32>, uv: vec2<f32>) -> f32 {
-    // Fetch the center pixel's normal.
-    let centerNormal = textureSample(normalTexture, sceneSampler, uv).rgb;
-
-    // Sample normals from neighboring pixels.
-    let n0 = textureSample(normalTexture, sceneSampler, uv + vec2(-adjustedPixelSize.x, -adjustedPixelSize.y)).rgb;
-    let n1 = textureSample(normalTexture, sceneSampler, uv + vec2(             0.0, -adjustedPixelSize.y)).rgb;
-    let n2 = textureSample(normalTexture, sceneSampler, uv + vec2( adjustedPixelSize.x, -adjustedPixelSize.y)).rgb;
-    let n3 = textureSample(normalTexture, sceneSampler, uv + vec2(-adjustedPixelSize.x, 0.0)).rgb;
-    let n5 = textureSample(normalTexture, sceneSampler, uv + vec2( adjustedPixelSize.x, 0.0)).rgb;
-    let n6 = textureSample(normalTexture, sceneSampler, uv + vec2(-adjustedPixelSize.x, adjustedPixelSize.y)).rgb;
-    let n7 = textureSample(normalTexture, sceneSampler, uv + vec2(             0.0, adjustedPixelSize.y)).rgb;
-    let n8 = textureSample(normalTexture, sceneSampler, uv + vec2( adjustedPixelSize.x, adjustedPixelSize.y)).rgb;
-
-    let dot0 = dot(centerNormal, n0);
-    let dot1 = dot(centerNormal, n1);
-    let dot2 = dot(centerNormal, n2);
-    let dot3 = dot(centerNormal, n3);
-    let dot5 = dot(centerNormal, n5);
-    let dot6 = dot(centerNormal, n6);
-    let dot7 = dot(centerNormal, n7);
-    let dot8 = dot(centerNormal, n8);
-
-    // Compute the difference between the center normal and the surrounding normals.
-    let normalDiff = max(
-        max(1.0 - dot0, 1.0 - dot1),
-        max(max(1.0 - dot2, 1.0 - dot3),
-        max(1.0 - dot5, max(1.0 - dot6, max(1.0 - dot7, 1.0 - dot8))))
-    );
-
-    // Apply a smoothstep function to create a soft edge effect.
-    let normalEdge = smoothstep(normalEdgeThreshold, normalEdgeThreshold + 15.0, normalDiff);
-
-    return normalEdge;
-}
-
-fn depthEdgeDetection(adjustedPixelSize: vec2<f32>, uv: vec2<f32>) -> f32 {
-    // Fetch the center pixel's depth.
-    let centerCoord = vec2<i32>(floor(uv * resolution));
-
-    let depthOffset = vec2<i32>(
-        i32(round(adjustedPixelSize.x * resolution.x)),
-        i32(round(adjustedPixelSize.y * resolution.y))
-    );
-
-    // Sample depth from neighboring pixels using textureLoad.
-    let centerDepth = textureLoad(depthTexture, centerCoord, 0);
-    let d0 = textureLoad(depthTexture, centerCoord + vec2<i32>(-depthOffset.x, -depthOffset.y), 0);
-    let d1 = textureLoad(depthTexture, centerCoord + vec2<i32>( 0, -depthOffset.y), 0);
-    let d2 = textureLoad(depthTexture, centerCoord + vec2<i32>( depthOffset.x, -depthOffset.y), 0);
-    let d3 = textureLoad(depthTexture, centerCoord + vec2<i32>(-depthOffset.x,  0), 0);
-    let d5 = textureLoad(depthTexture, centerCoord + vec2<i32>( depthOffset.x,  0), 0);
-    let d6 = textureLoad(depthTexture, centerCoord + vec2<i32>(-depthOffset.x, depthOffset.y), 0);
-    let d7 = textureLoad(depthTexture, centerCoord + vec2<i32>( 0, depthOffset.y), 0);
-    let d8 = textureLoad(depthTexture, centerCoord + vec2<i32>( depthOffset.x, depthOffset.y), 0);
-
-    // Compute the difference between the center depth and the surrounding depths.
-    let depthDiff = max(
-        max(abs(centerDepth - d0), abs(centerDepth - d1)),
-        max(
-            max(abs(centerDepth - d2), abs(centerDepth - d3)),
-            max(abs(centerDepth - d5),
-            max(abs(centerDepth - d6),
-            max(abs(centerDepth - d7), abs(centerDepth - d8)))
-            )
-        )
-    );
-
-    // Apply a smoothstep function to create a soft edge effect.
-    let depthEdge = smoothstep(depthEdgeThreshold, depthEdgeThreshold + 5.0, depthDiff);
-
-    return depthEdge;
-}
+struct VertexOutput {
+    @builtin(position) position: vec4<f32>,
+    @location(0) uv: vec2<f32>,
+};
 
 @fragment
-fn fragment(input: FullscreenVertexOutput) -> @location(0) vec4<f32> {
-    let centerColor = textureSample(sceneTexture, sceneSampler, input.uv);
-    let pixelSize = vec2<f32>(1.0 / resolution.x, 1.0 / resolution.y);
-    // let adjustedPixelSize = pixelSize * lineThickness;
-    // Multiply lineThickness by the zoom factor (which you update from your camera control code)
-    let adjustedPixelSize = pixelSize * lineThickness * settings.zoom;
-
-
-
-    let lumEdge = luminanceEdgeDetection(adjustedPixelSize, centerColor, input.uv);
-    let normalEdge = normalEdgeDetection(adjustedPixelSize, input.uv);
-    let depthEdge = depthEdgeDetection(adjustedPixelSize, input.uv);
-
-    // Combine all edge detection results into a smooth composite edge mask.
-    let compositeEdge = max(lumEdge, max(normalEdge, depthEdge));
-    let edgeStrength: f32 = 5.0; // Adjust this value as needed.
-
-    // Posterization: Quantize the center color.
-    let quantized = floor(centerColor.rgb * colorSteps + 0.5) / colorSteps;
-    let baseColor = vec4<f32>(quantized, 1.0);
-
-    // Blend in the outline (edge) color using the composite edge mask.
-    let finalColor = mix(baseColor, edgeColor, compositeEdge);
-    return finalColor;
+fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
+    let uv = in.uv;
+    let pixelSize = vec2<f32>(1.0) / settings.resolution;
+    // Multiply pixelSize by our thickness factor to sample at a further distance if desired
+    let offset = pixelSize * settings.outlineThickness;
+    
+    // Sample the center normals and neighbors using the offset
+    let centerN: vec3<f32> = textureSample(normalTex, normalSampler, uv).xyz;
+    let upN: vec3<f32> = textureSample(normalTex, normalSampler, uv + vec2<f32>(0.0,  offset.y)).xyz;
+    let downN: vec3<f32> = textureSample(normalTex, normalSampler, uv - vec2<f32>(0.0,  offset.y)).xyz;
+    let leftN: vec3<f32> = textureSample(normalTex, normalSampler, uv - vec2<f32>(offset.x, 0.0)).xyz;
+    let rightN: vec3<f32> = textureSample(normalTex, normalSampler, uv + vec2<f32>(offset.x, 0.0)).xyz;
+    
+    // Compute edge strength by how different the normals are
+    let diffUp   = length(centerN - upN);
+    let diffDown = length(centerN - downN);
+    let diffLeft = length(centerN - leftN);
+    let diffRight= length(centerN - rightN);
+    
+    let maxDiff = max(max(diffUp, diffDown), max(diffLeft, diffRight));
+    
+    // If the difference in normals exceeds the threshold, draw outline
+    if maxDiff > settings.normalThreshold {
+        return settings.outlineColor;
+    }
+    
+    // Otherwise, show the original color
+    let sceneColor = textureSample(sceneTex, sceneSampler, uv);
+    return sceneColor;
 }

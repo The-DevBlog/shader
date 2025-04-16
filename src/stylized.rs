@@ -33,6 +33,7 @@ pub struct StylizedShaderPlugin;
 
 impl Plugin for StylizedShaderPlugin {
     fn build(&self, app: &mut App) {
+        app.register_type::<StylizedShaderSettings>();
         app.register_type::<StylizedShaderSettings>().add_plugins((
             // The settings will be a component that lives in the main world but will
             // be extracted to the render world every frame.
@@ -188,14 +189,19 @@ impl ViewNode for PostProcessNode {
             &post_process_pipeline.layout,
             // It's important for this to match the BindGroupLayout defined in the PostProcessPipeline
             &BindGroupEntries::sequential((
-                // Make sure to use the source view
+                // Binding 0: Screen texture (source view)
                 post_process.source,
-                // Use the sampler created for the pipeline
+                // Binding 1: Screen sampler
                 &post_process_pipeline.sampler,
-                // Set the settings binding
+                // Binding 2: Settings uniform
                 settings_binding.clone(),
-                &depth_texture.texture.default_view,
+                // Binding 3: Normal texture (use the normal texture view)
                 &normal_texture.texture.default_view,
+                // Binding 4: Normal sampler (reuse the same sampler or a dedicated one)
+                &post_process_pipeline.sampler,
+                // Binding 5: Depth texture
+                &depth_texture.texture.default_view,
+                // Binding 6: View uniform
                 view_uniforms,
             )),
         );
@@ -257,8 +263,10 @@ impl FromWorld for PostProcessPipeline {
                     sampler(SamplerBindingType::Filtering),
                     // The settings uniform that will control the effect
                     uniform_buffer::<StylizedShaderSettings>(true),
-                    texture_depth_2d(),
                     texture_2d(TextureSampleType::Float { filterable: true }),
+                    // Binding 4: The normal sampler.
+                    sampler(SamplerBindingType::Filtering),
+                    texture_depth_2d(),
                     uniform_buffer::<ViewUniform>(true),
                 ),
             ),
@@ -310,12 +318,22 @@ impl FromWorld for PostProcessPipeline {
 // This is the component that will get passed to the shader
 #[derive(Reflect, Component, Clone, Copy, ExtractComponent, ShaderType)]
 pub struct StylizedShaderSettings {
-    pub zoom: f32,
+    // pub zoom: f32,
+    pub resolution: Vec2,
+    pub normal_threshold: f32,
+    pub outline_color: Vec4,
+    pub outline_thickness: f32,
 }
 
 impl Default for StylizedShaderSettings {
     fn default() -> Self {
-        Self { zoom: 1.0 }
+        Self {
+            // zoom: 1.0,
+            resolution: Vec2::new(1920.0, 1080.0),
+            normal_threshold: 0.02,
+            outline_color: Vec4::new(0.0, 0.0, 0.0, 1.0),
+            outline_thickness: 2.5,
+        }
     }
 }
 
@@ -324,22 +342,22 @@ fn update_zoom_system(
     mut events: EventReader<MouseWheel>,
     mut settings: Query<&mut StylizedShaderSettings>,
 ) {
-    let Ok(mut settings) = settings.get_single_mut() else {
-        return;
-    };
+    // let Ok(mut settings) = settings.get_single_mut() else {
+    //     return;
+    // };
 
-    for ev in events.read() {
-        // Increase zoom (thicker outlines) when scrolling up,
-        // and decrease when scrolling down.
-        if ev.y < 0.0 {
-            settings.zoom -= 0.3;
-            info!("Zoom increased: {}", settings.zoom);
-        } else if ev.y > 0.0 {
-            settings.zoom += 0.3;
-            // settings.zoom = (settings.zoom - 0.1).max(0.1); // avoid non-positive zoom
-            info!("Zoom decreased: {}", settings.zoom);
-        }
+    // for ev in events.read() {
+    //     // Increase zoom (thicker outlines) when scrolling up,
+    //     // and decrease when scrolling down.
+    //     if ev.y < 0.0 {
+    //         settings.zoom -= 0.3;
+    //         info!("Zoom increased: {}", settings.zoom);
+    //     } else if ev.y > 0.0 {
+    //         settings.zoom += 0.3;
+    //         // settings.zoom = (settings.zoom - 0.1).max(0.1); // avoid non-positive zoom
+    //         info!("Zoom decreased: {}", settings.zoom);
+    //     }
 
-        settings.zoom = settings.zoom.clamp(0.8, 5.0);
-    }
+    //     settings.zoom = settings.zoom.clamp(0.8, 5.0);
+    // }
 }

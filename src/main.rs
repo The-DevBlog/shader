@@ -12,6 +12,7 @@ use bevy::{
     render::render_resource::{AsBindGroup, ShaderRef},
     scene::SceneInstanceReady,
 };
+use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_third_person_camera::{
     ThirdPersonCamera, ThirdPersonCameraPlugin, ThirdPersonCameraTarget, Zoom,
 };
@@ -30,6 +31,7 @@ fn main() {
         .add_plugins((
             // TintShaderPlugin,
             // DefaultPlugins,
+            WorldInspectorPlugin::new(),
             StylizedShaderPlugin,
             ThirdPersonCameraPlugin,
             MaterialPlugin::<ExtendedMaterial<StandardMaterial, MyExtension>>::default(),
@@ -125,6 +127,7 @@ fn setup(
             ..default()
         },
         Transform::from_xyz(20.0, 20.0, 20.0).looking_at(Vec3::ZERO, Vec3::Y),
+        Name::new("Camera"),
     ));
 
     cmds.spawn((
@@ -220,4 +223,6 @@ fn spawn_tank(mut cmds: Commands, my_assets: Res<MyAssets>) {
 //             }
 //         }
 //     }
+// }
+// }
 // }
