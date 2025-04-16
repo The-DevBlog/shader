@@ -26,12 +26,12 @@ use bevy::{
 };
 
 /// This example uses a shader source file from the assets subdirectory
-const SHADER_ASSET_PATH: &str = "stylized.wgsl";
+const SHADER_ASSET_PATH: &str = "outline.wgsl";
 
 /// It is generally encouraged to set up post processing effects as a plugin
-pub struct StylizedShaderPlugin;
+pub struct OutlineShaderPlugin;
 
-impl Plugin for StylizedShaderPlugin {
+impl Plugin for OutlineShaderPlugin {
     fn build(&self, app: &mut App) {
         app.register_type::<StylizedShaderSettings>();
         app.register_type::<StylizedShaderSettings>().add_plugins((

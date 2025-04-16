@@ -1,8 +1,4 @@
 use bevy::{
-    color::palettes::{
-        css::{BLUE, GREEN, LIGHT_BLUE, RED, WHITE, YELLOW},
-        tailwind::BLUE_600,
-    },
     core_pipeline::{
         fxaa::{Fxaa, Sensitivity},
         prepass::{DepthPrepass, NormalPrepass},
@@ -10,17 +6,16 @@ use bevy::{
     pbr::{ExtendedMaterial, MaterialExtension, OpaqueRendererMethod},
     prelude::*,
     render::render_resource::{AsBindGroup, ShaderRef},
-    scene::SceneInstanceReady,
 };
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_third_person_camera::{
     ThirdPersonCamera, ThirdPersonCameraPlugin, ThirdPersonCameraTarget, Zoom,
 };
 
-mod stylized;
+mod outline;
 mod tint;
 
-use stylized::{StylizedShaderPlugin, StylizedShaderSettings};
+use outline::{OutlineShaderPlugin, StylizedShaderSettings};
 use tint::{TintShaderPlugin, TintShaderSettings};
 
 const TINT_STRENGTH: f32 = 0.8;
@@ -32,7 +27,7 @@ fn main() {
             // TintShaderPlugin,
             // DefaultPlugins,
             WorldInspectorPlugin::new(),
-            StylizedShaderPlugin,
+            OutlineShaderPlugin,
             ThirdPersonCameraPlugin,
             MaterialPlugin::<ExtendedMaterial<StandardMaterial, MyExtension>>::default(),
         ))
@@ -87,7 +82,6 @@ fn move_cube(
 fn setup(
     mut cmds: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut extended_materials: ResMut<Assets<ExtendedMaterial<StandardMaterial, MyExtension>>>,
     mut standard_materials: ResMut<Assets<StandardMaterial>>,
 ) {
     // ground
@@ -95,18 +89,6 @@ fn setup(
     cmds.spawn((
         Mesh3d(meshes.add(Plane3d::default().mesh().size(150.0, 150.0))),
         MeshMaterial3d(standard_materials.add(StandardMaterial::from_color(color))),
-        // MeshMaterial3d(extended_materials.add(ExtendedMaterial {
-        //     base: StandardMaterial {
-        //         base_color: color.into(),
-        //         opaque_render_method: OpaqueRendererMethod::Auto,
-        //         ..Default::default()
-        //     },
-        //     extension: MyExtension {
-        //         base_color: color.into(),
-        //         tint: YELLOW.into(),
-        //         tint_strength: TINT_STRENGTH,
-        //     },
-        // })),
     ));
 
     // camera
@@ -184,45 +166,3 @@ fn spawn_tank(mut cmds: Commands, my_assets: Res<MyAssets>) {
         Tank,
     ));
 }
-
-// fn customize_scene_materials(
-//     trigger: Trigger<SceneInstanceReady>,
-//     mut extended_materials: ResMut<Assets<ExtendedMaterial<StandardMaterial, MyExtension>>>,
-//     standard_materials: Res<Assets<StandardMaterial>>,
-//     mut cmds: Commands,
-//     q_children: Query<&Children>,
-//     q_mesh_material: Query<(Entity, &MeshMaterial3d<StandardMaterial>)>,
-// ) {
-//     // Traverse the spawned SceneRoot's descendants.
-//     for entity in q_children.iter_descendants(trigger.entity()) {
-//         // Try to get a MeshMaterial3d<StandardMaterial> component on this entity.
-//         if let Ok((ent, mesh_mat)) = q_mesh_material.get(entity) {
-//             println!("Changing");
-//             // Use the handle from the MeshMaterial3d to fetch the StandardMaterial.
-//             if let Some(std_mat) = standard_materials.get(mesh_mat.id()) {
-//                 // Optionally, clone and modify the StandardMaterial.
-//                 let modified_std = std_mat.clone();
-//                 // (For example, you could change the base color here before wrapping.)
-//                 // modified_std.base_color = Color::rgb(0.0, 0.0, 1.0).into();
-//                 let base_color = modified_std.base_color;
-//                 // Now create an ExtendedMaterial that wraps the StandardMaterial.
-//                 let new_extended_handle = extended_materials.add(ExtendedMaterial {
-//                     base: modified_std,
-//                     extension: MyExtension {
-//                         base_color: base_color.into(),
-//                         tint: YELLOW.into(),          // Your desired tint color.
-//                         tint_strength: TINT_STRENGTH, // How strongly to apply the tint.
-//                     },
-//                 });
-
-//                 // Replace the material component on this entity:
-//                 // Option 1: Remove the old material component and insert the new one.
-//                 cmds.entity(ent)
-//                     .remove::<MeshMaterial3d<StandardMaterial>>() // Remove the original.
-//                     .insert(MeshMaterial3d(new_extended_handle)); // Insert the new, extended one.
-//             }
-//         }
-//     }
-// }
-// }
-// }
