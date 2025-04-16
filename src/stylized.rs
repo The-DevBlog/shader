@@ -5,6 +5,7 @@ use bevy::{
         prepass::ViewPrepassTextures,
     },
     ecs::query::QueryItem,
+    input::mouse::MouseWheel,
     prelude::*,
     render::{
         extract_component::{
@@ -45,6 +46,8 @@ impl Plugin for StylizedShaderPlugin {
             // and writing the data to that buffer every frame.
             UniformComponentPlugin::<StylizedShaderSettings>::default(),
         ));
+
+        app.add_systems(Update, update_zoom_system);
 
         // We need to get the render app from the main app
         let Some(render_app) = app.get_sub_app_mut(RenderApp) else {
@@ -307,11 +310,34 @@ impl FromWorld for PostProcessPipeline {
 // This is the component that will get passed to the shader
 #[derive(Reflect, Component, Clone, Copy, ExtractComponent, ShaderType)]
 pub struct StylizedShaderSettings {
-    pub placeholder: u32,
+    pub zoom: f32,
 }
 
 impl Default for StylizedShaderSettings {
     fn default() -> Self {
-        Self { placeholder: 0 }
+        Self { zoom: 1.0 }
+    }
+}
+
+fn update_zoom_system(
+    // keyboard_input: Res<Input<KeyCode>>,
+    mut events: EventReader<MouseWheel>,
+    mut settings: Query<&mut StylizedShaderSettings>,
+) {
+    let Ok(mut settings) = settings.get_single_mut() else {
+        return;
+    };
+
+    for ev in events.read() {
+        // Increase zoom (thicker outlines) when scrolling up,
+        // and decrease when scrolling down.
+        if ev.y > 0.0 {
+            settings.zoom -= 0.1;
+            info!("Zoom increased: {}", settings.zoom);
+        } else if ev.y < 0.0 {
+            settings.zoom += 0.1;
+            // settings.zoom = (settings.zoom - 0.1).max(0.1); // avoid non-positive zoom
+            info!("Zoom decreased: {}", settings.zoom);
+        }
     }
 }

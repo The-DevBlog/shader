@@ -9,6 +9,13 @@ const depthEdgeThreshold: f32 = 1.0;       // Base threshold for depth differenc
 const lineThickness: f32 = 1.0;
 const resolution: vec2<f32> = vec2<f32>(1920.0, 1080.0); // Target resolution (adjust as needed)
 
+struct StylizedShaderSettings {
+    zoom: f32 // Externally updated (e.g. 1.0 for default, >1.0 for zoom in, <1.0 for zoom out)
+}
+
+@group(0) @binding(2)
+var<uniform> settings: StylizedShaderSettings; 
+
 // Scene color texture and sampler.
 @group(0) @binding(0)
 var sceneTexture : texture_2d<f32>;
@@ -141,7 +148,11 @@ fn depthEdgeDetection(adjustedPixelSize: vec2<f32>, uv: vec2<f32>) -> f32 {
 fn fragment(input: FullscreenVertexOutput) -> @location(0) vec4<f32> {
     let centerColor = textureSample(sceneTexture, sceneSampler, input.uv);
     let pixelSize = vec2<f32>(1.0 / resolution.x, 1.0 / resolution.y);
-    let adjustedPixelSize = pixelSize * lineThickness;
+    // let adjustedPixelSize = pixelSize * lineThickness;
+    // Multiply lineThickness by the zoom factor (which you update from your camera control code)
+    let adjustedPixelSize = pixelSize * lineThickness * settings.zoom;
+
+
 
     let lumEdge = luminanceEdgeDetection(adjustedPixelSize, centerColor, input.uv);
     let normalEdge = normalEdgeDetection(adjustedPixelSize, input.uv);
