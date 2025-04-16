@@ -331,13 +331,15 @@ fn update_zoom_system(
     for ev in events.read() {
         // Increase zoom (thicker outlines) when scrolling up,
         // and decrease when scrolling down.
-        if ev.y > 0.0 {
-            settings.zoom -= 0.1;
+        if ev.y < 0.0 {
+            settings.zoom -= 0.3;
             info!("Zoom increased: {}", settings.zoom);
-        } else if ev.y < 0.0 {
-            settings.zoom += 0.1;
+        } else if ev.y > 0.0 {
+            settings.zoom += 0.3;
             // settings.zoom = (settings.zoom - 0.1).max(0.1); // avoid non-positive zoom
             info!("Zoom decreased: {}", settings.zoom);
         }
+
+        settings.zoom = settings.zoom.clamp(0.8, 5.0);
     }
 }
