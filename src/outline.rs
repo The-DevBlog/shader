@@ -318,7 +318,7 @@ impl FromWorld for PostProcessPipeline {
 // This is the component that will get passed to the shader
 #[derive(Reflect, Component, Clone, Copy, ExtractComponent, ShaderType)]
 pub struct StylizedShaderSettings {
-    // pub zoom: f32,
+    pub zoom: f32,
     pub resolution: Vec2,
     pub normal_threshold: f32,
     pub outline_color: Vec4,
@@ -328,7 +328,7 @@ pub struct StylizedShaderSettings {
 impl Default for StylizedShaderSettings {
     fn default() -> Self {
         Self {
-            // zoom: 1.0,
+            zoom: 1.0,
             resolution: Vec2::new(1920.0, 1080.0),
             normal_threshold: 0.02,
             outline_color: Vec4::new(0.0, 0.0, 0.0, 1.0),
