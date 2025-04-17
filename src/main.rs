@@ -15,7 +15,7 @@ use bevy_third_person_camera::{
 mod outline;
 mod tint;
 
-use outline::{OutlineShaderPlugin, StylizedShaderSettings};
+use outline::{OutlineShaderPlugin, OutlineShaderSettings};
 use tint::{TintShaderPlugin, TintShaderSettings};
 
 const TINT_STRENGTH: f32 = 0.8;
@@ -95,7 +95,7 @@ fn setup(
     cmds.spawn((
         Camera3d::default(),
         // TintShaderSettings::default(),
-        StylizedShaderSettings::default(),
+        OutlineShaderSettings::default(),
         DepthPrepass,
         NormalPrepass,
         Msaa::Off,

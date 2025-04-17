@@ -6,7 +6,11 @@
 // const outlineColor: vec4<f32> = vec4<f32>(0.0, 0.0, 0.0, 1.0); // Outline color (black here)
 // const outlineThickness: f32 = 2.5; // Outline thickness factor. Increase for a thicker outline.
 
+const MIN_ZOOM: f32 = 0.6;
+const MAX_ZOOM: f32 = 3.0;
+
 struct OutlineShaderSettings {
+    zoom: f32,
     resolution: vec2<f32>,
     normalThreshold: f32,
     outlineColor: vec4<f32>,
@@ -23,7 +27,6 @@ var sceneSampler: sampler;
 @group(0) @binding(2)
 var<uniform> settings: OutlineShaderSettings;
 
-
 // Normal map from an offscreen pass.
 @group(0) @binding(3)
 var normalTex: texture_2d<f32>;
@@ -39,7 +42,8 @@ struct VertexOutput {
 @fragment
 fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     let uv = in.uv;
-    let pixelSize = vec2<f32>(1.0) / settings.resolution;
+    let zoom = clamp(settings.zoom, MIN_ZOOM, MAX_ZOOM);
+    let pixelSize = vec2<f32>(1.0) / settings.resolution * zoom;
     // Multiply pixelSize by our thickness factor to sample at a further distance if desired
     let offset = pixelSize * settings.outlineThickness;
     

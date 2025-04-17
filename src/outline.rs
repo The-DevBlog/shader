@@ -33,19 +33,19 @@ pub struct OutlineShaderPlugin;
 
 impl Plugin for OutlineShaderPlugin {
     fn build(&self, app: &mut App) {
-        app.register_type::<StylizedShaderSettings>();
-        app.register_type::<StylizedShaderSettings>().add_plugins((
+        app.register_type::<OutlineShaderSettings>();
+        app.register_type::<OutlineShaderSettings>().add_plugins((
             // The settings will be a component that lives in the main world but will
             // be extracted to the render world every frame.
             // This makes it possible to control the effect from the main world.
             // This plugin will take care of extracting it automatically.
             // It's important to derive [`ExtractComponent`] on [`PostProcessingSettings`]
             // for this plugin to work correctly.
-            ExtractComponentPlugin::<StylizedShaderSettings>::default(),
+            ExtractComponentPlugin::<OutlineShaderSettings>::default(),
             // The settings will also be the data used in the shader.
             // This plugin will prepare the component for the GPU by creating a uniform buffer
             // and writing the data to that buffer every frame.
-            UniformComponentPlugin::<StylizedShaderSettings>::default(),
+            UniformComponentPlugin::<OutlineShaderSettings>::default(),
         ));
 
         app.add_systems(Update, update_zoom_system);
@@ -117,10 +117,10 @@ impl ViewNode for PostProcessNode {
         &'static ViewTarget,
         &'static ViewPrepassTextures,
         // This makes sure the node only runs on cameras with the PostProcessSettings component
-        &'static StylizedShaderSettings,
+        &'static OutlineShaderSettings,
         // As there could be multiple post processing components sent to the GPU (one per camera),
         // we need to get the index of the one that is associated with the current view.
-        &'static DynamicUniformIndex<StylizedShaderSettings>,
+        &'static DynamicUniformIndex<OutlineShaderSettings>,
         &'static ViewUniformOffset,
     );
 
@@ -154,7 +154,7 @@ impl ViewNode for PostProcessNode {
         };
 
         // Get the settings uniform binding
-        let settings_uniforms = world.resource::<ComponentUniforms<StylizedShaderSettings>>();
+        let settings_uniforms = world.resource::<ComponentUniforms<OutlineShaderSettings>>();
         let view_uniforms = world.resource::<ViewUniforms>();
         let Some(view_uniforms) = view_uniforms.uniforms.binding() else {
             return Ok(());
@@ -262,7 +262,7 @@ impl FromWorld for PostProcessPipeline {
                     // The sampler that will be used to sample the screen texture
                     sampler(SamplerBindingType::Filtering),
                     // The settings uniform that will control the effect
-                    uniform_buffer::<StylizedShaderSettings>(true),
+                    uniform_buffer::<OutlineShaderSettings>(true),
                     texture_2d(TextureSampleType::Float { filterable: true }),
                     // Binding 4: The normal sampler.
                     sampler(SamplerBindingType::Filtering),
@@ -317,7 +317,7 @@ impl FromWorld for PostProcessPipeline {
 
 // This is the component that will get passed to the shader
 #[derive(Reflect, Component, Clone, Copy, ExtractComponent, ShaderType)]
-pub struct StylizedShaderSettings {
+pub struct OutlineShaderSettings {
     pub zoom: f32,
     pub resolution: Vec2,
     pub normal_threshold: f32,
@@ -325,7 +325,7 @@ pub struct StylizedShaderSettings {
     pub outline_thickness: f32,
 }
 
-impl Default for StylizedShaderSettings {
+impl Default for OutlineShaderSettings {
     fn default() -> Self {
         Self {
             zoom: 1.0,
@@ -340,24 +340,19 @@ impl Default for StylizedShaderSettings {
 fn update_zoom_system(
     // keyboard_input: Res<Input<KeyCode>>,
     mut events: EventReader<MouseWheel>,
-    mut settings: Query<&mut StylizedShaderSettings>,
+    mut settings: Query<&mut OutlineShaderSettings>,
 ) {
-    // let Ok(mut settings) = settings.get_single_mut() else {
-    //     return;
-    // };
+    let Ok(mut settings) = settings.get_single_mut() else {
+        return;
+    };
 
-    // for ev in events.read() {
-    //     // Increase zoom (thicker outlines) when scrolling up,
-    //     // and decrease when scrolling down.
-    //     if ev.y < 0.0 {
-    //         settings.zoom -= 0.3;
-    //         info!("Zoom increased: {}", settings.zoom);
-    //     } else if ev.y > 0.0 {
-    //         settings.zoom += 0.3;
-    //         // settings.zoom = (settings.zoom - 0.1).max(0.1); // avoid non-positive zoom
-    //         info!("Zoom decreased: {}", settings.zoom);
-    //     }
+    for ev in events.read() {
+        if ev.y < 0.0 {
+            settings.zoom -= 0.1;
+        } else if ev.y > 0.0 {
+            settings.zoom += 0.1;
+        }
 
-    //     settings.zoom = settings.zoom.clamp(0.8, 5.0);
-    // }
+        settings.zoom = settings.zoom.clamp(0.6, 3.0);
+    }
 }
